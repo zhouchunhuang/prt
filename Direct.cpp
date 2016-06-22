@@ -1,27 +1,6 @@
 #include "stdafx.h"
 #include "prt.h"
 
-Model::Model(void)
-{
-	i = 0;
-	j = 0;
-	k = 0;
-	v = 0;
-	t = 0;
-	tau = 0;
-	l = 0;
-
-	string arcFile = "./input/Arc.csv";
-	string vehFile = "./input/Vehicle.csv";
-	string trackFile = "./input/Track.csv";
-	string dmdFile = "./input/Demand.csv";
-
-	rd.readArcData(arcFile, arc, nArc, N);
-	rd.readVehicleData(vehFile, vehicle, nVeh, maxC);
-	rd.readTrackData(trackFile, track, nTrack, maxD, maxL);
-	rd.readDemandData(dmdFile, dmd, T);
-}
-
 int Model::Direct()
 {
 #ifdef TEST_MODE
@@ -50,7 +29,7 @@ int Model::Direct()
 	//extensive model
 	PRT = IloModel(env);
 	PRTSolver = IloCplex(PRT);
-	PRTSolver.setParam(IloCplex::TiLim, 120);
+	PRTSolver.setParam(IloCplex::TiLim, 300);
 	PRTSolver.setParam(IloCplex::EpGap, 0.01);
 
 	//decision variables
@@ -278,7 +257,7 @@ int Model::Direct()
 
 
 #ifdef TEST_MODE
-	PRTSolver.exportModel("./output/PRT.lp");
+	PRTSolver.exportModel("../output/PRT.lp");
 #endif
 
 	_start = clock();
@@ -286,7 +265,7 @@ int Model::Direct()
 	_end = clock();
 	cmp_time = (double)(_end - _start)/CLOCKS_PER_SEC;
 
-	//PRTSolver.writeSolution("./output/solution.lp");
+	//PRTSolver.writeSolution("../output/solution.lp");
 	outputSol();
 
 	return 1;
@@ -541,7 +520,7 @@ int Model::initSystem()
 
 int Model::outputSol()
 {
-	sprintf(path, "./output/routes_%dV_%dN_%dArc_%dT.txt", nVeh, N, nArc, T);
+	sprintf(path, "%soutput/routes_%dV_%dN_%dArc_%dT.txt", directoryPath, nVeh, N, nArc, T);
 	string outputFile(path);
 	//string outputFile = "./output/routes.txt";
 	output.open(outputFile);
@@ -664,7 +643,7 @@ int Model::outputSol()
 int Model::heuristicSol()
 {
 	ofstream heusol;
-	sprintf(path, "./output/heuristic_%dV_%dN_%dArc_%dT.txt", nVeh, N, nArc, T);
+	sprintf(path, "../../output/heuristic_%dV_%dN_%dArc_%dT.txt", nVeh, N, nArc, T);
 	string outputFile(path);
 	heusol.open(outputFile);
 

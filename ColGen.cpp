@@ -34,7 +34,7 @@ int Model::ColGen()
 	}
 	cout << endl;
 #endif
-	sprintf(path, "./output/ColGen_%dV_%dN_%dArc_%dT.txt", nVeh, N, nArc, T);
+	sprintf(path, "../../output/ColGen_%dV_%dN_%dArc_%dT.txt", nVeh, N, nArc, T);
 	string outputFile(path);
 	output.open(outputFile);
 	output << "Iteration\tUB\tLB\tNLB\tGap\n";

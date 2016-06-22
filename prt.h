@@ -66,10 +66,10 @@ private:
 	int nl;				//number of tracks
 public:
 	Reader(void);
-	bool	Reader::readArcData(string fname, vector<Arc> &arc, int &nArc, int &N);
-	bool	Reader::readVehicleData(string fname, vector<Vehicle> &vehicle, int &nVeh, double &maxC);
-	bool	Reader::readTrackData(string fname, vector<Track> &track, int &nTrack, int &maxD, int &maxL);
-	bool	Reader::readDemandData(string fname, vector2int &dmd, int &T);
+	bool	Reader::readArcData(string &fname, vector<Arc> &arc, int &nArc, int &N);
+	bool	Reader::readVehicleData(string &fname, vector<Vehicle> &vehicle, int &nVeh, double &maxC);
+	bool	Reader::readTrackData(string &fname, vector<Track> &track, int &nTrack, int &maxD, int &maxL);
+	bool	Reader::readDemandData(string &fname, vector2int &dmd, int &T);
 };
 
 class System
@@ -100,15 +100,15 @@ private:
 	int nVeh;			//number of vehicles
 	int T;				//number of periods
 	int nTrack;			//number of tracks
-	char buf[33];
-	char path[200];
+	char* buf;
+	char* path;
 
 	clock_t _start;
 	clock_t _end;
 	double cmp_time;
+	string directoryPath;
 	ofstream output;
 
-	Reader rd;
 	vector<Arc> arc;
 	vector<Vehicle> vehicle;
 	vector<Track> track;
@@ -168,6 +168,7 @@ private:
 
 public:
 	Model(void);		//initialize model parameters
+	void InitModel(int argc, char **argv);		//initialize model by reading files
 	int Direct();		//solve the extensive model directly by CPLEX
 	int Heuristic();	//heuristic algorithm
 	int Heuristic2();	//improved heuristic algorithm
@@ -185,4 +186,6 @@ public:
 
 	int min(int a, int b);		//get the maximum value between a and b
 	int max(int a, int b);
+
+	void freeMem();
 };

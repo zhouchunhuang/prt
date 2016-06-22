@@ -11,11 +11,11 @@ Reader::Reader(void)
 	nl = 0;
 }
 
-bool Reader::readArcData(string fname, vector<Arc> &arc, int &nArc, int &N)
+bool Reader::readArcData(string &fname, vector<Arc> &arc, int &nArc, int &N)
 {
 	int col = 0;
 	int row = 0;
-	ifstream f_arc(fname);
+	ifstream f_arc(fname.c_str());
 	if(!f_arc.good())
 	{
 		cerr << "FAIL TO READ ARC DATA!";
@@ -24,12 +24,13 @@ bool Reader::readArcData(string fname, vector<Arc> &arc, int &nArc, int &N)
 
 	row = 0; col = 0;
 
-	while(f_arc.good())
+	//while(f_arc.good())
+	while(!f_arc.eof())
 	{
 		row++;
 		Arc newArc;
-		string s;
-		if(!getline(f_arc,s)) break;
+		string s = "";
+		if(!std::getline(f_arc,s)) break;
 
 		col = 0;
 		istringstream ss(s);
@@ -76,7 +77,7 @@ bool Reader::readArcData(string fname, vector<Arc> &arc, int &nArc, int &N)
 	return true;
 }
 
-bool Reader::readVehicleData(string fname, vector<Vehicle> &vehicle, int &nVeh, double &maxC)
+bool Reader::readVehicleData(string &fname, vector<Vehicle> &vehicle, int &nVeh, double &maxC)
 {
 	int col = 0;
 	int row = 0;
@@ -146,7 +147,7 @@ bool Reader::readVehicleData(string fname, vector<Vehicle> &vehicle, int &nVeh, 
 	return true;
 }
 
-bool Reader::readTrackData(string fname, vector<Track> &track, int &nTrack, int &maxD, int &maxL)
+bool Reader::readTrackData(string &fname, vector<Track> &track, int &nTrack, int &maxD, int &maxL)
 {
 	int col = 0;
 	int row = 0;
@@ -215,7 +216,7 @@ bool Reader::readTrackData(string fname, vector<Track> &track, int &nTrack, int 
 	return true;
 }
 
-bool Reader::readDemandData(string fname, vector2int &dmd, int &T)
+bool Reader::readDemandData(string &fname, vector2int &dmd, int &T)
 {
 	int col = 0;
 	int row = 0;
