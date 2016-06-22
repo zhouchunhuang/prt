@@ -34,7 +34,7 @@ int Model::ColGen()
 	}
 	cout << endl;
 #endif
-	sprintf(path, "../../output/ColGen_%dV_%dN_%dArc_%dT.txt", nVeh, N, nArc, T);
+	sprintf(path, "%soutput/ColGen_%dV_%dN_%dArc_%dT.txt", directoryPath.c_str(), nVeh, N, nArc, T);
 	string outputFile(path);
 	output.open(outputFile);
 	output << "Iteration\tUB\tLB\tNLB\tGap\n";
@@ -143,6 +143,7 @@ int Model::crtMP()
 		for(t = 0; t < T; t++){
 			objXpr += penalty * arc[k].cost * v_y[k][t];
 		}
+		objXpr += penalty * arc[k].cost * v_s[k][T - 1];
 	}
 	objMP.setExpr(objXpr);
 	
@@ -170,7 +171,7 @@ int Model::crtMP()
 
 	for(k = 0; k < nArc; k++){
 		if(arc[k].from == arc[k].to) continue; 
-		MP.add(IloRange(env, 0, v_s[k][T-1], 0, "TtlDmd"));
+		//MP.add(IloRange(env, 0, v_s[k][T-1], 0, "TtlDmd"));
 		DualDemand[k] = IloNumArray(env, T);
 		DualTmWindow[k] = IloNumArray(env, T - TimeWindow);
 		Demand[k] = IloRangeArray(env, T);
@@ -188,7 +189,7 @@ int Model::crtMP()
 	}
 
 	//initialize the MP
-	Heuristic();							//apply the heuristic algorithm to get the intial columns
+	Heuristic2();							//apply the heuristic algorithm to get the intial columns
 	for(v = 0; v < nVeh; v++){
 		sprintf(buf, "lambda(%d,0)", v);
 		v_lambda[v].add(IloNumVar(objMP(sys.routeCost[v])+Convex[v](1),0,1,ILOFLOAT,buf));
@@ -225,7 +226,8 @@ int Model::crtMP()
 	}
 	
 #ifdef MODEL_EXPORT
-	MPSolver.exportModel("output/MP.lp");
+	sprintf(buf, "%soutput/CG_MP.lp", directoryPath.c_str());
+	MPSolver.exportModel(buf);
 #endif
 	return 1;
 }
@@ -390,6 +392,7 @@ int Model::solveMP()
 {
 	MPSolver.solve();
 	UB = MPSolver.getObjValue();
+
 	//get duals
 	for(i = 0; i < N; i++){
 		MPSolver.getDuals(DualNodeCap[i], NodeCap[i]);
@@ -411,7 +414,7 @@ int Model::solveSP()
 	NLB = UB;
 	//update decomposed SP one by one and then solve them respectively
 	for(n = 0; n < N; n++){
-		//update OFV
+		//update OF
 		IloExpr objXpr(env);
 		for(v = 0; v < nVeh; v++){
 			if(vehicle[v].to != n)	continue;		
@@ -426,7 +429,7 @@ int Model::solveSP()
 
 						IloNum temp2 = arc[k].fcost;
 						for(vector<int>::iterator itr = arc[k].track.begin(); itr != arc[k].track.end(); itr++){
-							tau = t + abs(track[l].from - arc[k].from);
+							tau = t + abs(track[*itr].from - arc[k].from);
 							if(tau < T)	temp2 -= DualTrackCap[*itr][tau];
 						}
 						objXpr.setLinearCoef(v_z[k][v][t], temp2);

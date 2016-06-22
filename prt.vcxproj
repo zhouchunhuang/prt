@@ -159,6 +159,7 @@
   <ItemGroup>
     <ClCompile Include="ColGen.cpp" />
     <ClCompile Include="Direct.cpp" />
+    <ClCompile Include="Heuristics.cpp" />
     <ClCompile Include="prt.cpp" />
     <ClCompile Include="read.cpp" />
     <ClCompile Include="stdafx.cpp">

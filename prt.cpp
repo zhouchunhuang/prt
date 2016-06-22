@@ -11,9 +11,9 @@ int main(int argc, char *argv[])
 {
 	Model prtModel;
 	prtModel.InitModel(argc, argv);
-	prtModel.Direct();
-	//prtModel.Heuristic2();
-	//prtModel.ColGen();
+	//prtModel.Direct();
+	//prtModel.Heuristic();
+	prtModel.ColGen();
 
 	prtModel.freeMem();
 	return 1;
@@ -51,8 +51,6 @@ void Model::InitModel(int argc, char **argv)
 	{
 		directoryPath = "./";
 	}
-
-	cout << directoryPath << endl; 
 
 	string arcFile = directoryPath + "input/Arc.csv";
 	string vehFile = directoryPath + "input/Vehicle.csv";
