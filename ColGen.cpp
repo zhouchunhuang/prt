@@ -9,94 +9,27 @@
 
 int Model::ColGen()
 {
-	bool loop = true;
-#ifdef TEST_MODE
-	crtMP();
-	MPSolver.solve();
-	
-	cout << MPSolver.getObjValue() << endl;
-	for(v = 0; v < nVeh; v++){
-		IloNumArray	sol_lambda(env);
-		MPSolver.getValues(sol_lambda, v_lambda[v]);		
-		cout << sol_lambda << "\t";
-	}
-	cout << endl;
-	
-	for(v = 0; v < nVeh; v++){
-		MP.add(IloConversion(env, v_lambda[v], ILOINT));
-	}	
-	MPSolver.solve();
-	cout << MPSolver.getObjValue() << endl;
-	for(v = 0; v < nVeh; v++){
-		IloNumArray	sol_lambda(env);
-		MPSolver.getValues(sol_lambda, v_lambda[v]);		
-		cout << sol_lambda << "\t";
-	}
-	cout << endl;
-#endif
-	sprintf(path, "%soutput/ColGen_%dV_%dN_%dArc_%dT.txt", directoryPath.c_str(), nVeh, N, nArc, T);
-	string outputFile(path);
-	output.open(outputFile);
-	output << "Iteration\tUB\tLB\tNLB\tGap\n";
 	UB = +IloInfinity; LB = -IloInfinity; NLB = -IloInfinity; gap = 1.0;
 	itn = 0;
-	output << itn << "\t" << UB << "\t" << LB << "\t" << NLB << "\t" << gap << endl;
+	initOutputColgen();
 	_start = clock();
 	crtMP();
 	crtSP();
-	while(loop){
+
+	while(1)
+	{
 		itn++;	
 		solveMP();
 		solveSP();
 
-		gap = (NLB >LB) ? ((UB - NLB)/(1e-75 + UB)):((UB - LB)/(1e-75 + UB));
-		output << itn << "\t" << UB << "\t" << LB << "\t" << NLB << "\t" << gap << endl;
-		LB = (NLB >LB) ? NLB:LB;
-		if(gap < 0.01)	break;
-		_end = clock();
-		cmp_time = (double)(_end - _start)/CLOCKS_PER_SEC;
-		if(itn > 60 || cmp_time > 300)	break;
+		if (terminateColgen())
+		{
+			break;
+		}
 	}
-	MPSolver.solve();
-	output << "MP OFV = " << MPSolver.getObjValue() << endl;
-	output << "Solution from CG:\n";
-	for(v = 0; v < nVeh; v++){	
-		output << "Vehicle " << v << ":\t";
-		IloNumArray val_lambda(env, v_lambda[v].getSize());
-		MPSolver.getValues(v_lambda[v], val_lambda);
-		output << val_lambda << endl;
-		/*j = v_lambda[v].getSize();
-		for(i = 0; i < j; i++){
-			if(MPSolver.getBasisStatus(v_lambda[v][i]) == IloCplex::AtLower){
-				objMP.setLinearCoef(v_lambda[v][i], 0);				
-				for(t = 0; t < T; t++){
-					for(k = 0; k < nArc; k++){
-						if(arc[k].from == arc[k].to)	continue;
-						if(t < T - TimeWindow)	TmWindow[k][t].setLinearCoef(v_lambda[v][i], 0);
-						Demand[k][t].setLinearCoef(v_lambda[v][i], 0);
-					}
-					for(n = 0; n < N; n++){
-						NodeCap[n][t].setLinearCoef(v_lambda[v][i], 0);
-					}
-					for(l = 0; l < nTrack; l++){
-						TrackCap[l][t].setLinearCoef(v_lambda[v][i], 0);
-					}
-				}	
-				Convex[v].setLinearCoef(v_lambda[v][i], 0);
-			}
-		}*/
-	}
+
+	finalizeColgen();
 	
-	/*for(v = 0; v < nVeh; v++){
-		MP.add(IloConversion(env, v_lambda[v], ILOBOOL));
-	}
-	MPSolver.solve();
-
-	output << "Computational Time =" << cmp_time << "sec" << endl;
-	output << "Real UB = " << MPSolver.getObjValue() << endl;*/
-	output.close();
-
-	MPSolver.exportModel("output/MP_final.lp");
 	return 1;
 }
 
@@ -550,4 +483,74 @@ int Model::addColumns(int v)
 		}
 	}
 	return 1;
+}
+
+void Model::initOutputColgen()
+{
+	sprintf(path, "%soutput/ColGen_%dV_%dN_%dArc_%dT.txt", directoryPath.c_str(), nVeh, N, nArc, T);
+	string outputFile(path);
+	output.open(outputFile);
+	output << "Iteration\tUB\tLB\tNLB\tGap\n";
+	output << itn << "\t" << UB << "\t" << LB << "\t" << NLB << "\t" << gap << endl;
+}
+
+bool Model::terminateColgen()
+{
+	gap = (NLB > LB) ? ((UB - NLB) / (1e-75 + UB)) : ((UB - LB) / (1e-75 + UB));
+	output << itn << "\t" << UB << "\t" << LB << "\t" << NLB << "\t" << gap << endl;
+	LB = (NLB > LB) ? NLB : LB;
+	if (gap < 0.01)	
+	{ 
+		return true; 
+	}
+	_end = clock();
+	cmp_time = (double)(_end - _start) / (double)CLOCKS_PER_SEC;
+	if (cmp_time > WallTime)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void Model::finalizeColgen()
+{
+	MPSolver.solve();
+	output << "MP OFV = " << MPSolver.getObjValue() << endl;
+	output << "Solution from CG:\n";
+	for (v = 0; v < nVeh; v++){
+		output << "Vehicle " << v << ":\t";
+		IloNumArray val_lambda(env, v_lambda[v].getSize());
+		MPSolver.getValues(v_lambda[v], val_lambda);
+		output << val_lambda << endl;
+		/*j = v_lambda[v].getSize();
+		for(i = 0; i < j; i++){
+		if(MPSolver.getBasisStatus(v_lambda[v][i]) == IloCplex::AtLower){
+		objMP.setLinearCoef(v_lambda[v][i], 0);
+		for(t = 0; t < T; t++){
+		for(k = 0; k < nArc; k++){
+		if(arc[k].from == arc[k].to)	continue;
+		if(t < T - TimeWindow)	TmWindow[k][t].setLinearCoef(v_lambda[v][i], 0);
+		Demand[k][t].setLinearCoef(v_lambda[v][i], 0);
+		}
+		for(n = 0; n < N; n++){
+		NodeCap[n][t].setLinearCoef(v_lambda[v][i], 0);
+		}
+		for(l = 0; l < nTrack; l++){
+		TrackCap[l][t].setLinearCoef(v_lambda[v][i], 0);
+		}
+		}
+		Convex[v].setLinearCoef(v_lambda[v][i], 0);
+		}
+		}*/
+	}
+
+	for (v = 0; v < nVeh; v++){
+		MP.add(IloConversion(env, v_lambda[v], ILOBOOL));
+	}
+	MPSolver.solve();
+
+	output << "Computational Time =" << cmp_time << "sec" << endl;
+	output << "Real UB = " << MPSolver.getObjValue() << endl;
+	output.close();
 }

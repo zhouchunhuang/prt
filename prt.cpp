@@ -1,5 +1,5 @@
-// prt.cpp : Defines the entry point for the console application.
-//
+// prt.cpp : Solve scheduling problem for PRT system
+// instruction for arguments: directory path, algorithm (-d: direct, -h: heuristic, -c: colgen)
 
 #include "stdafx.h"
 #include <sstream>
@@ -11,9 +11,11 @@ int main(int argc, char *argv[])
 {
 	Model prtModel;
 	prtModel.InitModel(argc, argv);
-	//prtModel.Direct();
-	//prtModel.Heuristic();
-	prtModel.ColGen();
+
+	switch (prtModel._algo){
+	case DIRECT:	prtModel.Direct();
+	case HEURESTIC:	prtModel.Heuristic2();
+	case COLGEN:	prtModel.ColGen();}
 
 	prtModel.freeMem();
 	return 1;
@@ -41,17 +43,32 @@ Model::Model(void)
 
 void Model::InitModel(int argc, char **argv)
 {
-	Reader rd;
-
+	
 	for(i = 1; i < argc; i++)
 	{
-		directoryPath += argv[i];
+		if (string(argv[i]) == "-d")
+		{
+			_algo = DIRECT;
+		}
+		else if (string(argv[i]) == "-h")
+		{
+			_algo = HEURESTIC;
+		}
+		else if (string(argv[i]) == "-c")
+		{
+			_algo = COLGEN;
+		}
+		else
+		{
+			directoryPath += argv[i];
+		}
 	}
 	if(directoryPath.empty())
 	{
 		directoryPath = "./";
 	}
 
+	Reader rd;
 	string arcFile = directoryPath + "input/Arc.csv";
 	string vehFile = directoryPath + "input/Vehicle.csv";
 	string trackFile = directoryPath + "input/Track.csv";
@@ -61,6 +78,9 @@ void Model::InitModel(int argc, char **argv)
 	rd.readVehicleData(vehFile, vehicle, nVeh, maxC);
 	rd.readTrackData(trackFile, track, nTrack, maxD, maxL);
 	rd.readDemandData(dmdFile, dmd, T);
+
+	//build map
+
 }
 
 void Model::freeMem()

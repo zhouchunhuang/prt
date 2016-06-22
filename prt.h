@@ -7,6 +7,8 @@
 #include<vector>
 #include<string>
 #include<algorithm>
+#include<map>
+#include<set>
 
 #include "ilcplex\cplex.h"
 #include "ilcplex\ilocplex.h"
@@ -25,6 +27,7 @@ typedef IloArray<IloRangeArray> IloRangeArray2;
 //#define MODEL_EXPORT
 #define TimeWindow 2
 #define penalty 2
+#define WallTime 300				// maximum elapsed time
 
 class Vehicle
 {
@@ -86,6 +89,13 @@ public:
 	vector3int customer;				//number of customers that are transported by the vehicle at a certain time from i to j
 };
 
+enum Algo
+{
+	DIRECT,
+	HEURESTIC,
+	COLGEN
+};
+
 class Model
 {
 private:
@@ -112,6 +122,7 @@ private:
 	vector<Arc> arc;
 	vector<Vehicle> vehicle;
 	vector<Track> track;
+	map<int, set<Vehicle*>, less<int>> vehicleMap;
 	vector2int dmd;		//demand[t][k]
 	System sys;			//dynamic system status
 	double maxC;		//maximum charge amount during a time period
@@ -168,6 +179,7 @@ private:
 
 public:
 	Model(void);		//initialize model parameters
+	Algo _algo;			//options of algorithms
 	void InitModel(int argc, char **argv);		//initialize model by reading files
 	int Direct();		//solve the extensive model directly by CPLEX
 	int Heuristic();	//heuristic algorithm
@@ -186,6 +198,10 @@ public:
 
 	int min(int a, int b);		//get the maximum value between a and b
 	int max(int a, int b);
+
+	void initOutputColgen();
+	bool terminateColgen();
+	void finalizeColgen();
 
 	void freeMem();
 };
