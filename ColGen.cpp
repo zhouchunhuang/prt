@@ -11,11 +11,11 @@ int Model::ColGen()
 {
 	UB = +IloInfinity; LB = -IloInfinity; NLB = -IloInfinity; gap = 1.0;
 	itn = 0;
-	initOutputColgen();
-	_start = clock();
+	initOutputColgen();	
 	crtMP();
 	crtSP();
 
+	_start = clock();
 	while(1)
 	{
 		itn++;	
@@ -170,6 +170,8 @@ int Model::crtSP()
 	//model, variables and parameter definitions
 	SP = IloModel(env);
 	SPSolver = IloCplex(SP);
+	SPSolver.setParam(IloCplex::Threads, 8);
+
 	v_x = IloNumVarArray3(env, nArc);
 	v_z = IloNumVarArray3(env, nArc);
 	v_e = IloNumVarArray2(env, nVeh);
@@ -349,27 +351,36 @@ int Model::solveSP()
 	for(n = 0; n < N; n++){
 		//update OF
 		IloExpr objXpr(env);
-		for(v = 0; v < nVeh; v++){
-			if(vehicle[v].to != n)	continue;		
-			for(k = 0; k < nArc; k++){
-				if(arc[k].from != arc[k].to){
+		map<int, set<Vehicle*> >::iterator mapItr = vehicleMap.find(n);
+		if (mapItr == vehicleMap.end()) break;
+		set<Vehicle*> vehSet = mapItr->second;								// find the set of vehicles which initially stay at node n
+
+		for (set<Vehicle*>::iterator iVeh = vehSet.begin(); iVeh != vehSet.end(); iVeh++)
+		{	
+			v = vehicleIdx[*iVeh];
+			k = 0;
+			for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++)
+			{
+				if(iArc->from != iArc->to)
+				{
 					for(t = 0; t < T; t++){
-						IloNum temp1 = arc[k].cost - DualDemand[k][t];
+						IloNum temp1 = iArc->cost - DualDemand[k][t];
 						for(tau = t - 1; tau >= 0 && tau >= t - TimeWindow && tau < T - TimeWindow; tau--){
 							temp1 -= DualTmWindow[k][tau];
 						}
 						objXpr.setLinearCoef(v_x[k][v][t], temp1);
 
-						IloNum temp2 = arc[k].fcost;
-						for(vector<int>::iterator itr = arc[k].track.begin(); itr != arc[k].track.end(); itr++){
-							tau = t + abs(track[*itr].from - arc[k].from);
+						IloNum temp2 = iArc->fcost;
+						for (vector<int>::iterator itr = iArc->track.begin(); itr != iArc->track.end(); itr++){
+							tau = t + abs(track[*itr].from - iArc->from);
 							if(tau < T)	temp2 -= DualTrackCap[*itr][tau];
 						}
 						objXpr.setLinearCoef(v_z[k][v][t], temp2);
 					}
 			
 				}
-				else{
+				else
+				{
 					i = arc[k].to;
 					for(t = vehicle[v].time; t < T; t++){
 						objXpr.setLinearCoef(v_z[k][v][t], -DualNodeCap[i][t]);
@@ -516,7 +527,9 @@ bool Model::terminateColgen()
 void Model::finalizeColgen()
 {
 	MPSolver.solve();
+	cmp_time = (double)(clock() - _start) / (double)(CLOCKS_PER_SEC);
 	output << "MP OFV = " << MPSolver.getObjValue() << endl;
+	output << "Total Time = " << cmp_time << " sec" << endl;
 	output << "Solution from CG:\n";
 	for (v = 0; v < nVeh; v++){
 		output << "Vehicle " << v << ":\t";
@@ -545,12 +558,12 @@ void Model::finalizeColgen()
 		}*/
 	}
 
-	for (v = 0; v < nVeh; v++){
+	/*for (v = 0; v < nVeh; v++){
 		MP.add(IloConversion(env, v_lambda[v], ILOBOOL));
-	}
-	MPSolver.solve();
+		}
+		MPSolver.solve();
 
-	output << "Computational Time =" << cmp_time << "sec" << endl;
-	output << "Real UB = " << MPSolver.getObjValue() << endl;
+		output << "Computational Time =" << cmp_time << "sec" << endl;
+		output << "Real UB = " << MPSolver.getObjValue() << endl;*/
 	output.close();
 }

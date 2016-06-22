@@ -123,6 +123,7 @@ private:
 	vector<Vehicle> vehicle;
 	vector<Track> track;
 	map<int, set<Vehicle*>, less<int>> vehicleMap;
+	map<Vehicle*, int> vehicleIdx;
 	vector2int dmd;		//demand[t][k]
 	System sys;			//dynamic system status
 	double maxC;		//maximum charge amount during a time period

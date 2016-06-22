@@ -80,7 +80,22 @@ void Model::InitModel(int argc, char **argv)
 	rd.readDemandData(dmdFile, dmd, T);
 
 	//build map
-
+	int index = 0;
+	for (vector<Vehicle>::iterator iVeh = vehicle.begin(); iVeh != vehicle.end(); ++iVeh, ++index)
+	{
+		vehicleIdx.insert(pair<Vehicle*, int>(&(*iVeh), index));
+		map<int, set<Vehicle*>>::iterator mapItr = vehicleMap.find(iVeh->to);
+		if (mapItr != vehicleMap.end())
+		{
+			mapItr->second.insert(&(*iVeh));
+		}
+		else
+		{
+			set<Vehicle*> refSet;
+			refSet.insert(&(*iVeh));
+			vehicleMap.insert(pair<int, set<Vehicle*> >(iVeh->to, refSet));
+		}
+	}
 }
 
 void Model::freeMem()
