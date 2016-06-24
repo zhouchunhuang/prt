@@ -38,8 +38,6 @@ int Model::crtMP()
 	MP = IloModel(env);
 	MPSolver = IloCplex(MP);
 	MPSolver.setParam(IloCplex::TiLim,120);
-	//MPSolver.setParam(IloCplex::RootAlg, IloCplex::Barrier);
-	//MPSolver.setParam(IloCplex::BarCrossAlg, -1);
 	//dual solutions
 	DualNodeCap = IloNumArray2(env, N);	
 	DualTrackCap = IloNumArray2(env, nTrack);
@@ -170,7 +168,6 @@ int Model::crtSP()
 	//model, variables and parameter definitions
 	SP = IloModel(env);
 	SPSolver = IloCplex(SP);
-	SPSolver.setParam(IloCplex::Threads, 8);
 
 	v_x = IloNumVarArray3(env, nArc);
 	v_z = IloNumVarArray3(env, nArc);
