@@ -271,54 +271,6 @@ int Model::Direct()
 	return 1;
 }
 
-int Model::initSystem()
-{
-	sys.cost = 0;
-	for( t = 0; t < T; t++){
-		sys.Demand.push_back(dmd[t]);				//initialize system demand data
-		vector<int> remain;
-		for(k = 0; k < nArc; k++){
-			if(arc[k].from != arc[k].to)	remain.push_back(0);
-		}
-		sys.Remain.push_back(remain);
-	}
-	for(v = 0; v < nVeh; v++){
-		sys.vehicle.push_back(vehicle[v]);			//initialize vehicle status
-	}
-	for(i = 0; i < N; i++){
-		vector<int> newLoad;
-		for(t = 0; t < T; t++){
-			newLoad.push_back(0);
-		}
-		sys.NodeLoad.push_back(newLoad);						//initialize node load such that all are 0's
-	}
-	for(l = 0; l < nTrack; l++){
-		vector<int> newLoad;
-		for(t = 0; t < T; t++){
-			newLoad.push_back(0);
-		}
-		sys.TrackLoad.push_back(newLoad);						//initialize track load such that all are 0's
-	}
-	for(k = 0; k < nArc; k++){
-		vector2int	routeArc;
-		vector2int	cusArc;
-		for(v = 0; v < nVeh; v++){
-			vector<int>	routeVehicle;
-			vector<int> cusVehicle;
-			for(t = 0; t < T; t++){
-				routeVehicle.push_back(0);
-				cusVehicle.push_back(0);
-			}
-			routeArc.push_back(routeVehicle);
-			cusArc.push_back(cusVehicle);
-		}
-		sys.route.push_back(routeArc);
-		sys.customer.push_back(cusArc);
-	}
-
-	return 1;
-}
-
 int Model::outputSol()
 {
 	sprintf(path, "%soutput/routes_%dV_%dN_%dArc_%dT.txt", directoryPath.c_str(), nVeh, N, nArc, T);
