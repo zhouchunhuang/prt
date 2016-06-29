@@ -28,6 +28,7 @@ typedef IloArray<IloRangeArray> IloRangeArray2;
 #define TimeWindow 2
 #define penalty 2
 #define WallTime 300				// maximum elapsed time
+#define maxGreedyItn 10				// maximum iterations of greedy algorithm
 
 class Vehicle
 {
@@ -41,6 +42,14 @@ public:
 	bool assigned;		//whether the vehicle has been assigned
 };
 
+
+class Track
+{
+public:
+	int from;
+	int to;
+};
+
 class Arc
 {
 public:
@@ -50,13 +59,7 @@ public:
 	double cost;
 	int time;				//travel time incurred while traveling from i to j
 	vector<int> track;		//store the number of each track which is contained in the arc
-};
-
-class Track
-{
-public:
-	int from;
-	int to;
+	vector<Track*> tracks;  // store the object tracks contained in the arc
 };
 
 class Reader
@@ -122,7 +125,10 @@ private:
 	vector<Arc> arc;
 	vector<Vehicle> vehicle;
 	vector<Track> track;
-	map<int, set<Vehicle*>, less<int>> vehicleMap;
+	map<int, set<Vehicle*>, less<int>>	vehicleMap;
+	map<Vehicle*, vector<bool>>			vehicleStatus;	// true: assigned  false: not assigned
+	map<Vehicle*, vector<Arc*>>			vehicleRoute;	// store arcs that each vehicle is assigned to at each time period
+
 	map<Vehicle*, int> vehicleIdx;
 	vector2int dmd;		//demand[t][k]
 	System sys;			//dynamic system status
@@ -182,9 +188,11 @@ public:
 	Model(void);		//initialize model parameters
 	Algo _algo;			//options of algorithms
 	void InitModel(int argc, char **argv);		//initialize model by reading files
+	void reviewData();
 	int Direct();		//solve the extensive model directly by CPLEX
 	int Heuristic();	//heuristic algorithm
 	int Heuristic2();	//improved heuristic algorithm
+	int GreedyAlgo();	//greedy algorithm
 
 	int initSystem();	//initialize system status
 	int outputSol();	//write out solution to file

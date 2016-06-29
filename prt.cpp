@@ -79,10 +79,25 @@ void Model::InitModel(int argc, char **argv)
 	rd.readTrackData(trackFile, track, nTrack, maxD, maxL);
 	rd.readDemandData(dmdFile, dmd, T);
 
-	//build map
+	reviewData();
+}
+
+void Model::reviewData()
+{
+	// review arc data
+	for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++)
+	{
+		iArc->tracks.clear();
+		for (vector<int>::iterator nTrk = iArc->track.begin(); nTrk != iArc->track.end(); nTrk++)
+		{
+			iArc->tracks.push_back(&track[*nTrk]);
+		}
+	}
+	// build maps related to vehicles
 	int index = 0;
 	for (vector<Vehicle>::iterator iVeh = vehicle.begin(); iVeh != vehicle.end(); ++iVeh, ++index)
 	{
+		// vehicle map based on its intial station of each vehicle
 		vehicleIdx.insert(pair<Vehicle*, int>(&(*iVeh), index));
 		map<int, set<Vehicle*>>::iterator mapItr = vehicleMap.find(iVeh->to);
 		if (mapItr != vehicleMap.end())
@@ -95,6 +110,15 @@ void Model::InitModel(int argc, char **argv)
 			refSet.insert(&(*iVeh));
 			vehicleMap.insert(pair<int, set<Vehicle*> >(iVeh->to, refSet));
 		}
+		// initialize vehicle status and route maps
+		vector<bool> vecStatus;
+		vector<Arc*> vecRoute;
+		for (t = 0; t < T; t++)
+		{
+			vecStatus.push_back(false);						// initial status: idle
+		}
+		vehicleStatus.insert(pair<Vehicle*, vector<bool> >(&(*iVeh), vecStatus));
+		vehicleRoute.insert(pair<Vehicle*, vector<Arc*> >(&(*iVeh), vecRoute));
 	}
 }
 
