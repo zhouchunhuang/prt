@@ -206,7 +206,118 @@ int Model::Heuristic2()
 
 int Model::GreedyAlgo()
 {
+	_start = clock();
+	initSystem();
+	for (t = 0; t < T; t++){
+		//sort the arcs according to its demand
+		vector<pair<Arc*, double>> ArcDmd;
+		k = 0;
+		for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++){
+			if (iArc->from == iArc->to)	continue;
+			if (t)	sys.Demand[t][k] += sys.Demand[t - 1][k];
+			ArcDmd.push_back(pair<Arc*, double>(&(*iArc), penalty * iArc->cost * sys.Demand[t][k]));
+		}
+		sort(ArcDmd.begin(), ArcDmd.end(),
+			[](const pair<Arc*, double>& lhs, const pair<Arc*, double>& rhs) {
+			return lhs.second > rhs.second; });
+		//sort the vehicle battery level
+		vector<pair<Vehicle*, double>> Elvl;
+		for (vector<Vehicle>::iterator iVeh = sys.vehicle.begin(); iVeh != sys.vehicle.end(); ++iVeh){			
+			iVeh->assigned = false;															//reset all vehicles
+			Elvl.push_back(pair<Vehicle*, double>(&(*iVeh), iVeh->powLvl));
+		}
 
+		sort(Elvl.begin(), Elvl.end(),
+			[](const pair<Vehicle*, double>& lhs, const pair<Vehicle*, double>& rhs) {
+			return lhs.second > rhs.second; });
+		
+		k = 0;
+		for (vector<pair<Arc*, double>>::iterator vecItr = ArcDmd.begin(); vecItr != ArcDmd.end(); vecItr++, k++){
+			Arc* pArc = vecItr->first;
+			if (pArc->from ==pArc->to) continue;
+			if (!(sys.Demand[t][k]))	continue;
+			v= 0;
+			for (vector<pair<Vehicle*, double>>::iterator vecItr2 = Elvl.begin(); vecItr2 != Elvl.end(); vecItr2++, v++){
+				Vehicle* pVeh = vecItr2->first;
+				if (pVeh->to != pVeh->from)	continue;									//don't assign the vehicle if it is not in the station
+				if (pVeh->time != t){														//don't use the vehicle if it is moving											
+					pVeh->assigned = true;
+					continue;
+				}
+				if (pVeh->powLvl < pArc->fcost + min(sys.Demand[t][k], pVeh->cap) * pArc->cost)	continue;	//don't use the vehicle if battery level is not enough
+				if (!(sys.Demand[t][k]))	break;																					//break if demand is none
+				bool overload = false;
+				for (vector<int>::iterator itr = pArc->track.begin(); itr != pArc->track.end(); itr++){
+					tau = t + abs(track[*itr].from - pArc->from);
+					if (tau < T && sys.TrackLoad[*itr][tau] >= maxL){
+						overload = true;
+						break;
+					}
+				}
+				if (overload)	break;																			//no more vehicle assignment for this arc if overloaded
+
+				sys.route[k][v][t] = 1;																			//assign the vehicle which is available
+				sys.customer[k][v][t] = min(sys.Demand[t][k], pVeh->cap);								//the number of customers sent out
+				pVeh->powLvl -= pArc->fcost + pArc->cost * sys.customer[k][v][t];					//update vehicle status: battery level
+				pVeh->to = pArc->to;																	//update vehicle status: arriving station
+				pVeh->time = t + pArc->time;															//update vehicle status: arriving time
+				pVeh->assigned = true;																	//update vehicle status: assigned or not
+
+				sys.Demand[t][k] -= sys.customer[k][v][t];														//update demand	
+				for (vector<int>::iterator itr = pArc->track.begin(); itr != pArc->track.end(); itr++){		//update track load
+					tau = t + abs(track[*itr].from - pArc->from);
+					if (tau < T)	sys.TrackLoad[*itr][tau]++;
+				}
+			}
+		}
+		k = 0;
+		for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++){
+			if (iArc->from != iArc->to)	continue;
+			v= 0;
+			for (vector<Vehicle>::iterator iVeh = sys.vehicle.begin(); iVeh != sys.vehicle.end(); ++iVeh, v++){
+				if (!(iVeh->assigned) && iVeh->to == iArc->to && iVeh->time == t){
+					sys.route[k][v][t] = 1;						//stay in the station if the vehicle is not assigned toward any other stations
+					sys.NodeLoad[iArc->to][t]++;				//update node load
+					iVeh->time = t + 1;							//update time
+					iVeh->powLvl += maxC;						//update battery level
+				}
+			}
+		}
+		//if node load maximum is reached -- cancel vehicles toward this station and/or cancel previous route
+	}
+	// compute the total cost
+	sys.cost = 0;
+	k = 0;
+	for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++){
+		if (iArc->from == iArc->to)	continue;
+		for (t = 0; t < T; t++){
+			int val_y = sys.Demand[t][k];
+			for (v = 0; v < nVeh; v++){
+				sys.cost += iArc->fcost * sys.route[k][v][t] + iArc->cost * sys.customer[k][v][t];
+				for (tau = t + 1; tau <= t + TimeWindow && tau < T; tau++){
+					val_y -= sys.customer[k][v][tau];
+				}
+			}
+			val_y = max(val_y, 0);
+			sys.cost += penalty * iArc->cost * val_y;
+		}
+	}
+
+	for (v = 0; v < nVeh; v++){
+		double rCost = 0;
+		for (k = 0; k < nArc; k++){
+			for (t = 0; t < T; t++){
+				rCost += arc[k].fcost * sys.route[k][v][t] + arc[k].cost * sys.customer[k][v][t];
+			}
+		}
+		sys.routeCost.push_back(rCost);
+	}
+
+	_end = clock();
+	cmp_time = (double)(_end - _start) / CLOCKS_PER_SEC;
+
+	sprintf(path, "%soutput/GreedyAlgo_%dV_%dN_%dArc_%dT.txt", directoryPath.c_str(), nVeh, N, nArc, T);
+	heuristicSol();
 
 	return 1;
 }

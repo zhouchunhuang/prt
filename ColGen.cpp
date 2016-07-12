@@ -37,7 +37,7 @@ int Model::crtMP()
 {
 	MP = IloModel(env);
 	MPSolver = IloCplex(MP);
-	MPSolver.setParam(IloCplex::TiLim,120);
+	MPSolver.setParam(IloCplex::TiLim,300);
 	//dual solutions
 	DualNodeCap = IloNumArray2(env, N);	
 	DualTrackCap = IloNumArray2(env, nTrack);
@@ -555,12 +555,12 @@ void Model::finalizeColgen()
 		}*/
 	}
 
-	/*for (v = 0; v < nVeh; v++){
+	for (v = 0; v < nVeh; v++){
 		MP.add(IloConversion(env, v_lambda[v], ILOBOOL));
 		}
 		MPSolver.solve();
 
 		output << "Computational Time =" << cmp_time << "sec" << endl;
-		output << "Real UB = " << MPSolver.getObjValue() << endl;*/
+		output << "Real UB = " << MPSolver.getObjValue() << endl;
 	output.close();
 }

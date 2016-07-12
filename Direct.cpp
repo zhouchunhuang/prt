@@ -29,7 +29,7 @@ int Model::Direct()
 	//extensive model
 	PRT = IloModel(env);
 	PRTSolver = IloCplex(PRT);
-	PRTSolver.setParam(IloCplex::TiLim, 300);
+	PRTSolver.setParam(IloCplex::TiLim, 1200);
 	PRTSolver.setParam(IloCplex::EpGap, 0.01);
 
 	//decision variables

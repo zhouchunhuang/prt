@@ -1,5 +1,5 @@
 // prt.cpp : Solve scheduling problem for PRT system
-// instruction for arguments: directory path, algorithm (-d: direct, -h: heuristic, -c: colgen)
+// instruction for arguments: directory path (I:\git\prt), algorithm (-d: direct, -h: heuristic, -c: colgen)
 
 #include "stdafx.h"
 #include <sstream>
@@ -13,9 +13,11 @@ int main(int argc, char *argv[])
 	prtModel.InitModel(argc, argv);
 
 	switch (prtModel._algo){
-	case DIRECT:	prtModel.Direct();
-	case HEURESTIC:	prtModel.Heuristic2();
-	case COLGEN:	prtModel.ColGen();}
+	case DIRECT:	prtModel.Direct();break;
+	case HEURESTIC:	prtModel.Heuristic2();break;
+	case COLGEN:	prtModel.ColGen();break;
+	case GREEDY:	prtModel.GreedyAlgo(); break;
+	default:		break;}
 
 	prtModel.freeMem();
 	return 1;
@@ -57,6 +59,10 @@ void Model::InitModel(int argc, char **argv)
 		else if (string(argv[i]) == "-c")
 		{
 			_algo = COLGEN;
+		}
+		else if (string(argv[i]) == "-g")
+		{
+			_algo = GREEDY;
 		}
 		else
 		{

@@ -96,7 +96,8 @@ enum Algo
 {
 	DIRECT,
 	HEURESTIC,
-	COLGEN
+	COLGEN,
+	GREEDY
 };
 
 class Model
