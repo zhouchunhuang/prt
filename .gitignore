@@ -1,0 +1,11 @@
+x64/
+input/
+output/
+Debug/
+ipch/
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.vcxproj.filters
+*.vcxproj.user
