@@ -79,7 +79,7 @@ int Model::crtMP()
 	{
 		for(t = T - TimeWindow; t < T; t++)
 		{
-			objXpr += penalty * arc[k].cost * var_s[k][t];
+			objXpr += penalty * arc[k].cost * v_s[k][t];
 		}
 	}
 	objMP.setExpr(objXpr);

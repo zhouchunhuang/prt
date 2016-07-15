@@ -296,7 +296,7 @@ int Model::GreedyAlgo()
 				if(vehSelected) break;
 			}
 			//update system info after the assignment
-			if(pVeh)
+			if(isVehSelected)
 			{
 				sys.route[k][v][t] = 1;																			//assign the vehicle which is available
 				sys.customer[k][v][t] = min(sys.Demand[t][k], pVeh->cap);										//the number of customers sent out
