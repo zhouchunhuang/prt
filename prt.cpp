@@ -91,8 +91,10 @@ void Model::InitModel(int argc, char **argv)
 void Model::reviewData()
 {
 	// review arc data
-	for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++)
+	k = 0;
+	for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++)
 	{
+		arcIndex.insert(make_pair(&(*iArc), k));
 		iArc->tracks.clear();
 		for (vector<int>::iterator nTrk = iArc->track.begin(); nTrk != iArc->track.end(); nTrk++)
 		{
@@ -104,7 +106,7 @@ void Model::reviewData()
 	for (vector<Vehicle>::iterator iVeh = vehicle.begin(); iVeh != vehicle.end(); ++iVeh, ++index)
 	{
 		// vehicle map based on its intial station of each vehicle
-		vehicleIdx.insert(pair<Vehicle*, int>(&(*iVeh), index));
+		vehIndex.insert(make_pair(&(*iVeh), index));
 		map<int, set<Vehicle*>>::iterator mapItr = vehicleMap.find(iVeh->to);
 		if (mapItr != vehicleMap.end())
 		{
@@ -126,6 +128,16 @@ void Model::reviewData()
 		vehicleStatus.insert(pair<Vehicle*, vector<bool> >(&(*iVeh), vecStatus));
 		vehicleRoute.insert(pair<Vehicle*, vector<Arc*> >(&(*iVeh), vecRoute));
 	}
+}
+
+int Model::getArcIndex(Arc* pArc)
+{
+	return arcIndex[pArc];
+}
+
+int Model::getVehIndex(Vehicle* pVeh)
+{
+	return vehIndex[pVeh];
 }
 
 void Model::freeMem()

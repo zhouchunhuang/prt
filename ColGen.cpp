@@ -74,7 +74,13 @@ int Model::crtMP()
 		for(t = 0; t < T; t++){
 			objXpr += penalty * arc[k].cost * v_y[k][t];
 		}
-		objXpr += penalty * arc[k].cost * v_s[k][T - 1];
+	}
+	for(k = 0; k < nArc; k++)
+	{
+		for(t = T - TimeWindow; t < T; t++)
+		{
+			objXpr += penalty * arc[k].cost * var_s[k][t];
+		}
 	}
 	objMP.setExpr(objXpr);
 	
@@ -354,7 +360,7 @@ int Model::solveSP()
 
 		for (set<Vehicle*>::iterator iVeh = vehSet.begin(); iVeh != vehSet.end(); iVeh++)
 		{	
-			v = vehicleIdx[*iVeh];
+			v = vehIndex[*iVeh];
 			k = 0;
 			for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++)
 			{

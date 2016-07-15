@@ -28,7 +28,9 @@ typedef IloArray<IloRangeArray> IloRangeArray2;
 #define TimeWindow 2
 #define penalty 2
 #define WallTime 300				// maximum elapsed time
-#define maxGreedyItn 10				// maximum iterations of greedy algorithm
+#define MinDelayedPaxAssigned 3
+#define MinTotalPaxAssigned 6
+#define powerLB 5
 
 class Vehicle
 {
@@ -84,6 +86,7 @@ public:
 	vector2int Demand;
 	vector2int Remain;					//the number of remaining customers at each time
 	vector<Vehicle> vehicle;
+	map<Vehicle*, int> vehIndex;
 	vector2int NodeLoad;				//node load
 	vector2int TrackLoad;				//track load
 	double cost;
@@ -130,7 +133,9 @@ private:
 	map<Vehicle*, vector<bool>>			vehicleStatus;	// true: assigned  false: not assigned
 	map<Vehicle*, vector<Arc*>>			vehicleRoute;	// store arcs that each vehicle is assigned to at each time period
 
-	map<Vehicle*, int> vehicleIdx;
+	map<Arc*, int> arcIndex;
+	map<Vehicle*, int> vehIndex;
+
 	vector2int dmd;		//demand[t][k]
 	System sys;			//dynamic system status
 	double maxC;		//maximum charge amount during a time period
@@ -212,6 +217,9 @@ public:
 	void initOutputColgen();
 	bool terminateColgen();
 	void finalizeColgen();
+
+	int getArcIndex(Arc* pArc);
+	int getVehIndex(Vehicle* pVeh);
 
 	void freeMem();
 };

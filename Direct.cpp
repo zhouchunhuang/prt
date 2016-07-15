@@ -29,7 +29,7 @@ int Model::Direct()
 	//extensive model
 	PRT = IloModel(env);
 	PRTSolver = IloCplex(PRT);
-	PRTSolver.setParam(IloCplex::TiLim, 1200);
+	PRTSolver.setParam(IloCplex::TiLim, 300);
 	PRTSolver.setParam(IloCplex::EpGap, 0.01);
 
 	//decision variables
@@ -85,9 +85,17 @@ int Model::Direct()
 			for(v = 0; v < nVeh; v++){
 				objXpr += arc[k].fcost * var_z[k][v][t] + arc[k].cost * var_x[k][v][t];
 			}
-		}
-		objXpr += penalty * arc[k].cost * var_s[k][T-1];
+		}		
 	}
+
+	for(k = 0; k < nArc; k++)
+	{
+		for(t = T - TimeWindow; t < T; t++)
+		{
+			objXpr += penalty * arc[k].cost * var_s[k][t];
+		}
+	}
+
 	PRT.add(IloMinimize(env, objXpr));
 
 	//electricity for travel constraints	
@@ -137,12 +145,6 @@ int Model::Direct()
 			PRT.add(IloRange(env, dmd[t][k], xpr, dmd[t][k], buf));
 			xpr.end();
 		}
-	}
-
-	// the number of remaining customers at the last time period should be zero
-	for(k = 0; k < nArc; k++){
-		if(arc[k].from == arc[k].to) continue; 
-		PRT.add(IloRange(env, 0, var_s[k][T-1], 0, "TtlDmd"));
 	}
 
 	//Time window constraints

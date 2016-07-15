@@ -209,43 +209,45 @@ int Model::GreedyAlgo()
 	_start = clock();
 	initSystem();
 	for (t = 0; t < T; t++){
-		//sort the arcs according to its demand
-		vector<pair<Arc*, double>> ArcDmd;
-		k = 0;
-		for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++){
-			if (iArc->from == iArc->to)	continue;
-			if (t)	sys.Demand[t][k] += sys.Demand[t - 1][k];
-			ArcDmd.push_back(pair<Arc*, double>(&(*iArc), penalty * iArc->cost * sys.Demand[t][k]));
+		bool assignComplete = false;
+		vector<pair<Arc*, double>>		ArcDmd;				//store arc demands
+		vector<pair<Arc*, double>>		ArcDelayPax;		//store arc delayed pax (who are served out of time window)
+		vector<pair<Vehicle*, double>>	VehElvl;			//store vehicle electricity level
+		map<Arc*, bool>					arcIsAssigned;		//whether the arc demands are satisfied/assigned
+		for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++)
+		{
+			arcIsAssigned.insert(make_pair(&(*iArc), false));
 		}
-		sort(ArcDmd.begin(), ArcDmd.end(),
-			[](const pair<Arc*, double>& lhs, const pair<Arc*, double>& rhs) {
-			return lhs.second > rhs.second; });
-		//sort the vehicle battery level
-		vector<pair<Vehicle*, double>> Elvl;
-		for (vector<Vehicle>::iterator iVeh = sys.vehicle.begin(); iVeh != sys.vehicle.end(); ++iVeh){			
-			iVeh->assigned = false;															//reset all vehicles
-			Elvl.push_back(pair<Vehicle*, double>(&(*iVeh), iVeh->powLvl));
-		}
-
-		sort(Elvl.begin(), Elvl.end(),
-			[](const pair<Vehicle*, double>& lhs, const pair<Vehicle*, double>& rhs) {
-			return lhs.second > rhs.second; });
-		
-		k = 0;
-		for (vector<pair<Arc*, double>>::iterator vecItr = ArcDmd.begin(); vecItr != ArcDmd.end(); vecItr++, k++){
-			Arc* pArc = vecItr->first;
-			if (pArc->from ==pArc->to) continue;
-			if (!(sys.Demand[t][k]))	continue;
-			v= 0;
-			for (vector<pair<Vehicle*, double>>::iterator vecItr2 = Elvl.begin(); vecItr2 != Elvl.end(); vecItr2++, v++){
-				Vehicle* pVeh = vecItr2->first;
-				if (pVeh->to != pVeh->from)	continue;									//don't assign the vehicle if it is not in the station
-				if (pVeh->time != t){														//don't use the vehicle if it is moving											
-					pVeh->assigned = true;
-					continue;
-				}
-				if (pVeh->powLvl < pArc->fcost + min(sys.Demand[t][k], pVeh->cap) * pArc->cost)	continue;	//don't use the vehicle if battery level is not enough
-				if (!(sys.Demand[t][k]))	break;																					//break if demand is none
+		if (t)	sys.Demand[t][k] += sys.Demand[t - 1][k];									// this demand is updated: demand -= customer sent out				
+		while(!assignComplete)
+		{
+			//obtain real-time demand (current + previous remaining) and sort the arcs accordingly	
+			ArcDmd.clear();
+			for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++){
+				if (iArc->from == iArc->to)	continue;
+				k = getArcIndex(&(*iArc));
+				ArcDmd.push_back(pair<Arc*, double>(&(*iArc), penalty * iArc->cost * sys.Demand[t][k]));
+			}
+			sort(ArcDmd.begin(), ArcDmd.end(), [](const pair<Arc*, double>& lhs, const pair<Arc*, double>& rhs) { return lhs.second > rhs.second; });
+			//stop assignment at current period
+			if( ArcDmd.front().second == 0.)	break;			
+			//obtain and sort the vehicle battery level	
+			VehElvl.clear();
+			for (vector<Vehicle>::iterator iVeh = sys.vehicle.begin(); iVeh != sys.vehicle.end(); ++iVeh){			
+				iVeh->assigned = false;															//reset all vehicles
+				VehElvl.push_back(pair<Vehicle*, double>(&(*iVeh), iVeh->powLvl));
+			}
+			sort(VehElvl.begin(), VehElvl.end(), [](const pair<Vehicle*, double>& lhs, const pair<Vehicle*, double>& rhs) { return lhs.second > rhs.second; });		 
+			//assign the highest arc delay/demand to a candidate vehicle
+			Arc* pArc;
+			Vehicle* pVeh;
+			bool isVehSelected = false;
+			for (vector<pair<Arc*, double>>::iterator vecItr = ArcDmd.begin(); vecItr != ArcDmd.end(); vecItr++)
+			{
+				pArc = vecItr->first;
+				k = getArcIndex(pArc);
+				if (arcIsAssigned[pArc])	continue;					//skip this arc if it is already considered
+				// if any track is about to overload, set the arc status to be "assigned"
 				bool overload = false;
 				for (vector<int>::iterator itr = pArc->track.begin(); itr != pArc->track.end(); itr++){
 					tau = t + abs(track[*itr].from - pArc->from);
@@ -254,22 +256,77 @@ int Model::GreedyAlgo()
 						break;
 					}
 				}
-				if (overload)	break;																			//no more vehicle assignment for this arc if overloaded
+				if (overload)
+				{
+					arcIsAssigned[pArc] = true;																			//no more vehicle assignment for this arc if overloaded
+					continue;
+				}	
+				if(t < T - 2 && vecItr->second < MinTotalPaxAssigned *  penalty * pArc->cost)
+				{
+					arcIsAssigned[pArc] = true;
+					continue;
+				}
 
+				bool vehSelected = false;
+				for (vector<pair<Vehicle*, double>>::iterator vVeh = VehElvl.begin(); vVeh != VehElvl.end(); vVeh++)
+				{
+					//check if the vehicle is candidate
+					pVeh = vVeh->first;
+					map<Vehicle*, int>::iterator iVehIndex = sys.vehIndex.find(pVeh);
+					if(iVehIndex != sys.vehIndex.end())
+					{
+						v = iVehIndex->second;
+					}
+					if (pVeh->to != pArc->from)	continue;														//don't assign the vehicle if it is not in the station
+					if (pVeh->time != t){																		//don't use the vehicle if it is moving											
+						pVeh->assigned = true;
+						continue;
+					}
+					if (pVeh->powLvl - powerLB < pArc->fcost + min(sys.Demand[t][k], pVeh->cap) * pArc->cost)
+					{
+						arcIsAssigned[pArc] = true;																//no available vehicle can be assigned to this arc
+					}
+					else 
+					{
+						vehSelected = true;
+						isVehSelected = true;
+					}
+					break;
+				}
+				if(vehSelected) break;
+			}
+			//update system info after the assignment
+			if(pVeh)
+			{
 				sys.route[k][v][t] = 1;																			//assign the vehicle which is available
-				sys.customer[k][v][t] = min(sys.Demand[t][k], pVeh->cap);								//the number of customers sent out
-				pVeh->powLvl -= pArc->fcost + pArc->cost * sys.customer[k][v][t];					//update vehicle status: battery level
-				pVeh->to = pArc->to;																	//update vehicle status: arriving station
-				pVeh->time = t + pArc->time;															//update vehicle status: arriving time
-				pVeh->assigned = true;																	//update vehicle status: assigned or not
-
+				sys.customer[k][v][t] = min(sys.Demand[t][k], pVeh->cap);										//the number of customers sent out
+				pVeh->powLvl -= pArc->fcost + pArc->cost * sys.customer[k][v][t];								//update vehicle status: battery level
+				pVeh->to = pArc->to;																			//update vehicle status: arriving station
+				pVeh->time = t + pArc->time;																	//update vehicle status: arriving time
+				pVeh->assigned = true;																			//update vehicle status: assigned or not
 				sys.Demand[t][k] -= sys.customer[k][v][t];														//update demand	
-				for (vector<int>::iterator itr = pArc->track.begin(); itr != pArc->track.end(); itr++){		//update track load
+				for (vector<int>::iterator itr = pArc->track.begin(); itr != pArc->track.end(); itr++){			//update track load
 					tau = t + abs(track[*itr].from - pArc->from);
 					if (tau < T)	sys.TrackLoad[*itr][tau]++;
 				}
 			}
-		}
+			else
+			{
+				arcIsAssigned[pArc] = true;
+			}
+			
+			assignComplete = true;
+			k = 0;
+			for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++){
+				if(iArc->from == iArc->to) continue;
+				if(!arcIsAssigned[&(*iArc)]){
+					assignComplete = false;				//assign is complete only if all arcs are assigned
+					break;
+				}	
+			}
+			//if node load maximum is reached -- cancel vehicles toward this station and/or cancel previous route		
+		} //done while loop
+
 		k = 0;
 		for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++){
 			if (iArc->from != iArc->to)	continue;
@@ -283,13 +340,12 @@ int Model::GreedyAlgo()
 				}
 			}
 		}
-		//if node load maximum is reached -- cancel vehicles toward this station and/or cancel previous route
 	}
 	// compute the total cost
 	sys.cost = 0;
-	k = 0;
-	for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++, k++){
+	for (vector<Arc>::iterator iArc = arc.begin(); iArc != arc.end(); iArc++){
 		if (iArc->from == iArc->to)	continue;
+		k = getArcIndex(&(*iArc));
 		for (t = 0; t < T; t++){
 			int val_y = sys.Demand[t][k];
 			for (v = 0; v < nVeh; v++){
@@ -335,8 +391,16 @@ int Model::initSystem()
 		sys.Remain.push_back(remain);
 	}
 	for (v = 0; v < nVeh; v++){
-		sys.vehicle.push_back(vehicle[v]);			//initialize vehicle status
+		sys.vehicle.push_back(vehicle[v]);			//initialize vehicle status		
 	}
+
+	int index = 0;
+	for (vector<Vehicle>::iterator iVeh = sys.vehicle.begin(); iVeh != sys.vehicle.end(); iVeh++, index++)
+	{
+		Vehicle* pVeh = &(*iVeh);
+		sys.vehIndex.insert(make_pair(pVeh, index));
+	}
+
 	for (i = 0; i < N; i++){
 		vector<int> newLoad;
 		for (t = 0; t < T; t++){
@@ -478,6 +542,17 @@ int Model::heuristicSol()
 				}
 			}
 			heusol << trackLoad << "\t";
+		}
+		heusol << endl;
+	}
+
+	heusol << "Node Load over time:\n";
+	for(n = 0; n < N; n++)
+	{
+		heusol << "node " << n << ":\t";
+		for(t = 0; t < T; t++)
+		{
+			heusol << sys.NodeLoad[n][t] << "\t";
 		}
 		heusol << endl;
 	}
