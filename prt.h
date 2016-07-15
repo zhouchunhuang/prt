@@ -177,6 +177,12 @@ private:
 	IloNumArray2	DualTmWindow;
 	IloNumArray		DualConvex;
 
+	//Heuristic algorithm used
+	vector<pair<Arc*, double>>		ArcDmd;				//store arc demands
+	vector<pair<Arc*, double>>		ArcDelayPax;		//store arc delayed pax (who are served out of time window)
+	vector<pair<Vehicle*, double>>	VehElvl;			//store vehicle electricity level
+	map<Arc*, bool>					arcIsAssigned;		//whether the arc demands are satisfied/assigned
+
 	//SP decision variables and constraints
 	IloExpr				costXpr;	//cost of route solved from SP
 	IloNumVarArray3		v_x;		//the number of customers transported by a vehicle from i to j at time t
@@ -198,9 +204,15 @@ public:
 	int Direct();		//solve the extensive model directly by CPLEX
 	int Heuristic();	//heuristic algorithm
 	int Heuristic2();	//improved heuristic algorithm
+	
 	int GreedyAlgo();	//greedy algorithm
-
 	int initSystem();	//initialize system status
+	void startAssignment();
+	void reviewSystem();
+	bool assignVehtoArc(Arc* &pArc, Vehicle* &pVeh);
+	void updateSystem(Arc* pArc, Vehicle* pVeh, bool isVehtoArcAssigned);
+	void computeTotalCost();
+
 	int outputSol();	//write out solution to file
 	int heuristicSol();	//write out heuristic solution
 
