@@ -148,5 +148,9 @@ void Model::freeMem()
 	arc.clear();
 	vehicle.clear();
 	track.clear();
+	ArcDmd.clear();
+	ArcDelayPax.clear();		
+	VehElvl.clear();			
+	arcIsAssigned.clear();
 }
 

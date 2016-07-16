@@ -13,6 +13,11 @@ int Model::ColGen()
 	itn = 0;
 	initOutputColgen();	
 	crtMP();
+#ifdef TEST_MODE2
+	MPSolver.solve();
+	sprintf(buf, "%soutput/CG_mp_soln.xml", directoryPath.c_str());
+	MPSolver.writeSolutions(buf);
+#endif
 	crtSP();
 
 	_start = clock();
@@ -126,7 +131,8 @@ int Model::crtMP()
 	}
 
 	//initialize the MP
-	Heuristic2();							//apply the heuristic algorithm to get the intial columns
+	//Heuristic2();							//apply the heuristic algorithm to get the intial columns
+	GreedyAlgo();
 	for(v = 0; v < nVeh; v++){
 		sprintf(buf, "lambda(%d,0)", v);
 		v_lambda[v].add(IloNumVar(objMP(sys.routeCost[v])+Convex[v](1),0,1,ILOFLOAT,buf));
@@ -163,6 +169,9 @@ int Model::crtMP()
 	}
 	
 #ifdef MODEL_EXPORT
+	for (v = 0; v < nVeh; v++){
+		MP.add(IloConversion(env, v_lambda[v], ILOBOOL));
+	}
 	sprintf(buf, "%soutput/CG_MP.lp", directoryPath.c_str());
 	MPSolver.exportModel(buf);
 #endif

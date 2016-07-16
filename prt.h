@@ -23,7 +23,7 @@ typedef IloArray<IloNumVarArray> IloNumVarArray2;
 typedef IloArray<IloNumVarArray2> IloNumVarArray3;
 typedef IloArray<IloRangeArray> IloRangeArray2;
 
-//#define TEST_MODE
+//#define TEST_MODE2
 //#define MODEL_EXPORT
 #define TimeWindow 2
 #define penalty 2

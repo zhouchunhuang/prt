@@ -29,7 +29,7 @@ int Model::Direct()
 	//extensive model
 	PRT = IloModel(env);
 	PRTSolver = IloCplex(PRT);
-	PRTSolver.setParam(IloCplex::TiLim, 300);
+	PRTSolver.setParam(IloCplex::TiLim, WallTime);
 	PRTSolver.setParam(IloCplex::EpGap, 0.01);
 
 	//decision variables
@@ -267,7 +267,7 @@ int Model::Direct()
 	_end = clock();
 	cmp_time = (double)(_end - _start)/CLOCKS_PER_SEC;
 
-	//PRTSolver.writeSolution("../output/solution.lp");
+	//PRTSolver.writeSolution("../output/solution.xml");
 	outputSol();
 
 	return 1;
